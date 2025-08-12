@@ -6,14 +6,83 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C910B10C2E4BFB2B0098FCE5 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C910B10B2E4BFB2B0098FCE5 /* WidgetKit.framework */; };
+		C910B10E2E4BFB2B0098FCE5 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C910B10D2E4BFB2B0098FCE5 /* SwiftUI.framework */; };
+		C910B11C2E4BFB2D0098FCE5 /* HotHintWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C910B1092E4BFB2B0098FCE5 /* HotHintWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C910B1292E4BFECC0098FCE5 /* PasteBoardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C910B1272E4BFE9C0098FCE5 /* PasteBoardService.swift */; };
+		C910B12A2E4BFECC0098FCE5 /* PasteBoardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C910B1272E4BFE9C0098FCE5 /* PasteBoardService.swift */; };
+		C910B12B2E4BFEDE0098FCE5 /* HintModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C910B1232E4BFE4D0098FCE5 /* HintModels.swift */; };
+		C910B12C2E4BFEDE0098FCE5 /* HintModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C910B1232E4BFE4D0098FCE5 /* HintModels.swift */; };
+		C910B12D2E4BFEE50098FCE5 /* HotHintStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C910B1242E4BFE5B0098FCE5 /* HotHintStore.swift */; };
+		C910B12E2E4BFEE50098FCE5 /* HotHintStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C910B1242E4BFE5B0098FCE5 /* HotHintStore.swift */; };
+		C910B12F2E4BFEF10098FCE5 /* CopyHintIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C910B1252E4BFE690098FCE5 /* CopyHintIntent.swift */; };
+		C910B1302E4BFEF10098FCE5 /* CopyHintIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C910B1252E4BFE690098FCE5 /* CopyHintIntent.swift */; };
+		C910B1312E4C01540098FCE5 /* HintSheetEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C910B1262E4BFE890098FCE5 /* HintSheetEntity.swift */; };
+		C910B1322E4C01540098FCE5 /* HintSheetEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C910B1262E4BFE890098FCE5 /* HintSheetEntity.swift */; };
+		C910B1332E4C04B10098FCE5 /* hints.json in Resources */ = {isa = PBXBuildFile; fileRef = C910B1282E4BFEAA0098FCE5 /* hints.json */; };
+		C910B1342E4C04B10098FCE5 /* hints.json in Resources */ = {isa = PBXBuildFile; fileRef = C910B1282E4BFEAA0098FCE5 /* hints.json */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C910B11A2E4BFB2D0098FCE5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C910B0EC2E4BF94D0098FCE5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C910B1082E4BFB2B0098FCE5;
+			remoteInfo = HotHintWidgetsExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C910B1212E4BFB2D0098FCE5 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C910B11C2E4BFB2D0098FCE5 /* HotHintWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		C910B0F42E4BF94D0098FCE5 /* HotHint.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HotHint.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C910B1092E4BFB2B0098FCE5 /* HotHintWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HotHintWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C910B10B2E4BFB2B0098FCE5 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		C910B10D2E4BFB2B0098FCE5 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		C910B1232E4BFE4D0098FCE5 /* HintModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HintModels.swift; sourceTree = "<group>"; };
+		C910B1242E4BFE5B0098FCE5 /* HotHintStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotHintStore.swift; sourceTree = "<group>"; };
+		C910B1252E4BFE690098FCE5 /* CopyHintIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyHintIntent.swift; sourceTree = "<group>"; };
+		C910B1262E4BFE890098FCE5 /* HintSheetEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HintSheetEntity.swift; sourceTree = "<group>"; };
+		C910B1272E4BFE9C0098FCE5 /* PasteBoardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteBoardService.swift; sourceTree = "<group>"; };
+		C910B1282E4BFEAA0098FCE5 /* hints.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = hints.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C910B11D2E4BFB2D0098FCE5 /* Exceptions for "HotHintWidgets" folder in "HotHintWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C910B1082E4BFB2B0098FCE5 /* HotHintWidgetsExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C910B0F62E4BF94D0098FCE5 /* HotHint */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = HotHint;
+			sourceTree = "<group>";
+		};
+		C910B10F2E4BFB2B0098FCE5 /* HotHintWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C910B11D2E4BFB2D0098FCE5 /* Exceptions for "HotHintWidgets" folder in "HotHintWidgetsExtension" target */,
+			);
+			path = HotHintWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -26,13 +95,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C910B1062E4BFB2B0098FCE5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C910B10E2E4BFB2B0098FCE5 /* SwiftUI.framework in Frameworks */,
+				C910B10C2E4BFB2B0098FCE5 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		C910B0EB2E4BF94D0098FCE5 = {
 			isa = PBXGroup;
 			children = (
+				C910B1222E4BFE330098FCE5 /* Shared */,
 				C910B0F62E4BF94D0098FCE5 /* HotHint */,
+				C910B10F2E4BFB2B0098FCE5 /* HotHintWidgets */,
+				C910B10A2E4BFB2B0098FCE5 /* Frameworks */,
 				C910B0F52E4BF94D0098FCE5 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,8 +122,31 @@
 			isa = PBXGroup;
 			children = (
 				C910B0F42E4BF94D0098FCE5 /* HotHint.app */,
+				C910B1092E4BFB2B0098FCE5 /* HotHintWidgetsExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		C910B10A2E4BFB2B0098FCE5 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C910B10B2E4BFB2B0098FCE5 /* WidgetKit.framework */,
+				C910B10D2E4BFB2B0098FCE5 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		C910B1222E4BFE330098FCE5 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				C910B1282E4BFEAA0098FCE5 /* hints.json */,
+				C910B1272E4BFE9C0098FCE5 /* PasteBoardService.swift */,
+				C910B1262E4BFE890098FCE5 /* HintSheetEntity.swift */,
+				C910B1252E4BFE690098FCE5 /* CopyHintIntent.swift */,
+				C910B1242E4BFE5B0098FCE5 /* HotHintStore.swift */,
+				C910B1232E4BFE4D0098FCE5 /* HintModels.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -55,10 +159,12 @@
 				C910B0F02E4BF94D0098FCE5 /* Sources */,
 				C910B0F12E4BF94D0098FCE5 /* Frameworks */,
 				C910B0F22E4BF94D0098FCE5 /* Resources */,
+				C910B1212E4BFB2D0098FCE5 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C910B11B2E4BFB2D0098FCE5 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C910B0F62E4BF94D0098FCE5 /* HotHint */,
@@ -69,6 +175,28 @@
 			productName = HotHint;
 			productReference = C910B0F42E4BF94D0098FCE5 /* HotHint.app */;
 			productType = "com.apple.product-type.application";
+		};
+		C910B1082E4BFB2B0098FCE5 /* HotHintWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C910B11E2E4BFB2D0098FCE5 /* Build configuration list for PBXNativeTarget "HotHintWidgetsExtension" */;
+			buildPhases = (
+				C910B1052E4BFB2B0098FCE5 /* Sources */,
+				C910B1062E4BFB2B0098FCE5 /* Frameworks */,
+				C910B1072E4BFB2B0098FCE5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C910B10F2E4BFB2B0098FCE5 /* HotHintWidgets */,
+			);
+			name = HotHintWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = HotHintWidgetsExtension;
+			productReference = C910B1092E4BFB2B0098FCE5 /* HotHintWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -81,6 +209,9 @@
 				LastUpgradeCheck = 1630;
 				TargetAttributes = {
 					C910B0F32E4BF94D0098FCE5 = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					C910B1082E4BFB2B0098FCE5 = {
 						CreatedOnToolsVersion = 16.3;
 					};
 				};
@@ -100,6 +231,7 @@
 			projectRoot = "";
 			targets = (
 				C910B0F32E4BF94D0098FCE5 /* HotHint */,
+				C910B1082E4BFB2B0098FCE5 /* HotHintWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -109,6 +241,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C910B1332E4C04B10098FCE5 /* hints.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C910B1072E4BFB2B0098FCE5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C910B1342E4C04B10098FCE5 /* hints.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -119,10 +260,35 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C910B1292E4BFECC0098FCE5 /* PasteBoardService.swift in Sources */,
+				C910B1312E4C01540098FCE5 /* HintSheetEntity.swift in Sources */,
+				C910B12D2E4BFEE50098FCE5 /* HotHintStore.swift in Sources */,
+				C910B12F2E4BFEF10098FCE5 /* CopyHintIntent.swift in Sources */,
+				C910B12B2E4BFEDE0098FCE5 /* HintModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C910B1052E4BFB2B0098FCE5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C910B12A2E4BFECC0098FCE5 /* PasteBoardService.swift in Sources */,
+				C910B1322E4C01540098FCE5 /* HintSheetEntity.swift in Sources */,
+				C910B12E2E4BFEE50098FCE5 /* HotHintStore.swift in Sources */,
+				C910B1302E4BFEF10098FCE5 /* CopyHintIntent.swift in Sources */,
+				C910B12C2E4BFEDE0098FCE5 /* HintModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C910B11B2E4BFB2D0098FCE5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C910B1082E4BFB2B0098FCE5 /* HotHintWidgetsExtension */;
+			targetProxy = C910B11A2E4BFB2D0098FCE5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		C910B1002E4BF94E0098FCE5 /* Debug */ = {
@@ -251,11 +417,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HotHint/HotHint.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 378NGS49HA;
-				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -279,11 +446,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HotHint/HotHint.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 378NGS49HA;
-				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -296,6 +464,66 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.dannyfrancken.HotHint;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		C910B11F2E4BFB2D0098FCE5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = HotHintWidgets/HotHintWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 378NGS49HA;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HotHintWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = HotHintWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dannyfrancken.HotHint.HotHintWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C910B1202E4BFB2D0098FCE5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = HotHintWidgets/HotHintWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 378NGS49HA;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HotHintWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = HotHintWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dannyfrancken.HotHint.HotHintWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -318,6 +546,15 @@
 			buildConfigurations = (
 				C910B1032E4BF94E0098FCE5 /* Debug */,
 				C910B1042E4BF94E0098FCE5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C910B11E2E4BFB2D0098FCE5 /* Build configuration list for PBXNativeTarget "HotHintWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C910B11F2E4BFB2D0098FCE5 /* Debug */,
+				C910B1202E4BFB2D0098FCE5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
