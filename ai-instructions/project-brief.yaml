@@ -1,0 +1,532 @@
+project:
+  name: HotHint
+  platform: macOS
+  min_macos_version: "14.0"
+  language: Swift
+  frameworks:
+    - SwiftUI
+    - WidgetKit
+    - AppIntents
+    - UniformTypeIdentifiers
+
+targets:
+  - name: HotHint
+    type: app
+    bundle_id: com.dannyfrancken.HotHint
+    capabilities:
+      - AppGroups: ["group.com.dannyfrancken.hothint"]
+    info_plist: []
+
+  - name: HotHintWidgets
+    type: widget-extension
+    bundle_id: com.dannyfrancken.HotHint.HotHintWidgets
+    embeds:
+      - HotHint
+    dependencies:
+      - HotHint
+
+file_structure:
+  HotHint:
+    - HotHintApp.swift
+    - UI/
+      - ContentView.swift
+      - SidebarView.swift
+      - HintDetailView.swift
+    - Services/
+      - AppRouter.swift
+  HotHintWidgets:
+    - HotHintWidgetsBundle.swift
+    - HotHintWidgets.swift
+    - WidgetViews.swift
+    - WidgetProvider.swift
+  Shared:
+    - HintModels.swift
+    - HotHintStore.swift
+    - CopyHintIntent.swift
+    - HintSheetEntity.swift
+    - PasteboardService.swift
+    - hints.json
+
+# ---------------------------
+# MODELS & STORAGE
+# ---------------------------
+files:
+
+  - path: Shared/HintModels.swift
+    contents: |
+      import Foundation
+
+      public struct HintItem: Identifiable, Codable, Hashable {
+        public var id: UUID = .init()
+        public var title: String
+        public var command: String
+        public var notes: String?
+      }
+
+      public struct HintSheet: Identifiable, Codable, Hashable {
+        public var id: UUID = .init()
+        public var key: String       // "git", "terminal", "rails"
+        public var name: String
+        public var items: [HintItem]
+        public var isUserEditable: Bool = true
+      }
+
+      public struct AppData: Codable {
+        public var sheets: [HintSheet]
+      }
+
+  - path: Shared/hints.json
+    contents: |
+      {
+        "sheets": [
+          {
+            "key": "git",
+            "name": "Git",
+            "isUserEditable": true,
+            "items": [
+              { "title": "Status", "command": "git status", "notes": "Show changes" },
+              { "title": "Add All", "command": "git add -A", "notes": "" },
+              { "title": "Amend Last Commit", "command": "git commit --amend", "notes": "" },
+              { "title": "Soft Reset", "command": "git reset --soft HEAD~1", "notes": "" }
+            ]
+          },
+          {
+            "key": "terminal",
+            "name": "Terminal",
+            "isUserEditable": true,
+            "items": [
+              { "title": "Delete word (back)", "command": "Ctrl+W", "notes": "Zsh/Bash readline" },
+              { "title": "Beginning / End", "command": "Ctrl+A / Ctrl+E", "notes": "" },
+              { "title": "Kill line", "command": "Ctrl+U / Ctrl+K", "notes": "" }
+            ]
+          },
+          {
+            "key": "rails",
+            "name": "Rails",
+            "isUserEditable": true,
+            "items": [
+              { "title": "Run model specs", "command": "bundle exec rspec spec/models", "notes": "" },
+              { "title": "Rails console", "command": "bin/rails c", "notes": "" },
+              { "title": "DB migrate", "command": "bin/rails db:migrate", "notes": "" }
+            ]
+          }
+        ]
+      }
+
+  - path: Shared/HotHintStore.swift
+    contents: |
+      import Foundation
+      import Combine
+      import WidgetKit
+
+      final class HotHintStore: ObservableObject {
+        static let shared = HotHintStore()
+        @Published private(set) var data: AppData = .init(sheets: [])
+
+        private let filename = "hints.user.json"
+        private let appGroupId = "group.com.dannyfrancken.hothint"
+
+        private var userURL: URL {
+          let fm = FileManager.default
+          let base = fm.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)
+            ?? fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+          let appDir = base.appendingPathComponent("HotHint", isDirectory: true)
+          try? fm.createDirectory(at: appDir, withIntermediateDirectories: true)
+          return appDir.appendingPathComponent(filename)
+        }
+
+        init() { load() }
+
+        func load() {
+          if let userData = try? Data(contentsOf: userURL),
+             let decoded = try? JSONDecoder().decode(AppData.self, from: userData) {
+            self.data = decoded
+            return
+          }
+          // fallback to bundled json
+          if let url = Bundle.main.url(forResource: "hints", withExtension: "json"),
+             let data = try? Data(contentsOf: url),
+             let decoded = try? JSONDecoder().decode(AppData.self, from: data) {
+            self.data = decoded
+          }
+        }
+
+        func save() {
+          if let encoded = try? JSONEncoder().encode(data) {
+            try? encoded.write(to: userURL, options: .atomic)
+            WidgetCenter.shared.reloadAllTimelines()
+          }
+        }
+
+        func upsert(sheet: HintSheet) {
+          if let idx = data.sheets.firstIndex(where: { $0.id == sheet.id }) {
+            data.sheets[idx] = sheet
+          } else {
+            data.sheets.append(sheet)
+          }
+          save()
+        }
+
+        func addCustomSheet(named name: String) -> HintSheet {
+          var sheet = HintSheet(key: UUID().uuidString, name: name, items: [], isUserEditable: true)
+          upsert(sheet: sheet)
+          return sheet
+        }
+      }
+
+# ---------------------------
+# INTENTS (COPY + CONFIG)
+# ---------------------------
+  - path: Shared/PasteboardService.swift
+    contents: |
+      import AppKit
+
+      enum PasteboardService {
+        static func copy(_ string: String) {
+          let pb = NSPasteboard.general
+          pb.clearContents()
+          pb.setString(string, forType: .string)
+        }
+      }
+
+  - path: Shared/CopyHintIntent.swift
+    contents: |
+      import AppIntents
+
+      struct CopyHintIntent: AppIntent {
+        static var title: LocalizedStringResource = "Copy Hint"
+        static var description = IntentDescription("Copy a command to the clipboard.")
+
+        @Parameter(title: "Command")
+        var command: String
+
+        func perform() async throws -> some IntentResult {
+          PasteboardService.copy(command)
+          return .result()
+        }
+      }
+
+  - path: Shared/HintSheetEntity.swift
+    contents: |
+      import AppIntents
+
+      struct HintSheetEntity: AppEntity, Identifiable {
+        static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Hint Sheet")
+        static var defaultQuery = HintSheetQuery()
+
+        var id: String
+        var name: String
+
+        var displayRepresentation: DisplayRepresentation {
+          .init(title: .init(name))
+        }
+      }
+
+      struct HintSheetQuery: EntityQuery {
+        func entities(for identifiers: [HintSheetEntity.ID]) async throws -> [HintSheetEntity] {
+          let sheets = HotHintStore.shared.data.sheets
+          return sheets
+            .filter { identifiers.contains($0.key) }
+            .map { HintSheetEntity(id: $0.key, name: $0.name) }
+        }
+
+        func suggestedEntities() async throws -> [HintSheetEntity] {
+          HotHintStore.shared.data.sheets.map { HintSheetEntity(id: $0.key, name: $0.name) }
+        }
+
+        func defaultResult() async -> HintSheetEntity? {
+          try? await suggestedEntities().first
+        }
+      }
+
+# ---------------------------
+# APP UI (NAV SPLIT + TABLE)
+# ---------------------------
+  - path: HotHint/UI/ContentView.swift
+    contents: |
+      import SwiftUI
+
+      struct ContentView: View {
+        @ObservedObject var store = HotHintStore.shared
+        @State private var search = ""
+        @State private var selection: HintSheet.ID?
+
+        var body: some View {
+          NavigationSplitView {
+            SidebarView(selection: $selection, search: $search)
+          } detail: {
+            if let sel = selection, let sheet = store.data.sheets.first(where: { $0.id == sel }) {
+              HintDetailView(sheet: sheet)
+            } else {
+              ContentUnavailableView("Select a sheet", systemImage: "menucard")
+            }
+          }
+        }
+      }
+
+  - path: HotHint/UI/SidebarView.swift
+    contents: |
+      import SwiftUI
+
+      struct SidebarView: View {
+        @ObservedObject var store = HotHintStore.shared
+        @Binding var selection: HintSheet.ID?
+        @Binding var search: String
+        @State private var showingAdd = false
+        @State private var newName = ""
+
+        var body: some View {
+          List(store.data.sheets, selection: $selection) { sheet in
+            Text(sheet.name).tag(sheet.id)
+          }
+          .navigationTitle("Hint Sheets")
+          .toolbar { Button { showingAdd = true } label: { Image(systemName: "plus") } }
+          .searchable(text: $search)
+          .sheet(isPresented: $showingAdd) {
+            VStack(spacing: 12) {
+              Text("New Sheet").font(.headline)
+              TextField("Name", text: $newName).textFieldStyle(.roundedBorder)
+              HStack {
+                Button("Cancel") { showingAdd = false }
+                Spacer()
+                Button("Create") {
+                  let created = store.addCustomSheet(named: newName.isEmpty ? "Custom" : newName)
+                  selection = created.id
+                  newName = ""
+                  showingAdd = false
+                }.keyboardShortcut(.defaultAction)
+              }
+            }
+            .padding()
+            .frame(width: 360)
+          }
+        }
+      }
+
+  - path: HotHint/UI/HintDetailView.swift
+    contents: |
+      import SwiftUI
+
+      struct HintDetailView: View {
+        @ObservedObject var store = HotHintStore.shared
+        @State var sheet: HintSheet
+        @State private var title = ""
+        @State private var command = ""
+        @State private var notes = ""
+
+        var body: some View {
+          VStack(alignment: .leading, spacing: 12) {
+            Text(sheet.name).font(.title2).bold()
+
+            Table(sheet.items) {
+              TableColumn("Title") { item in Text(item.title) }
+              TableColumn("Command") { item in Text(item.command).font(.system(.body, design: .monospaced)) }
+              TableColumn("Notes") { item in Text(item.notes ?? "").foregroundStyle(.secondary) }
+              TableColumn("") { item in
+                HStack(spacing: 8) {
+                  Button { PasteboardService.copy(item.command) } label: { Image(systemName: "doc.on.doc") }
+                  Button(role: .destructive) {
+                    if let idx = sheet.items.firstIndex(of: item) {
+                      sheet.items.remove(at: idx)
+                      store.upsert(sheet: sheet)
+                    }
+                  } label: { Image(systemName: "trash") }
+                }
+              }.width(72)
+            }
+            .frame(minHeight: 260)
+
+            Divider()
+            Text("Add Item").font(.headline)
+            TextField("Title", text: $title)
+            TextField("Command", text: $command).font(.system(.body, design: .monospaced))
+            TextField("Notes (optional)", text: $notes)
+            HStack {
+              Spacer()
+              Button("Add") {
+                let new = HintItem(title: title, command: command, notes: notes.isEmpty ? nil : notes)
+                sheet.items.append(new)
+                store.upsert(sheet: sheet)
+                title = ""; command = ""; notes = ""
+              }.disabled(command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+          }
+          .padding()
+        }
+      }
+
+  - path: HotHint/Services/AppRouter.swift
+    contents: |
+      import SwiftUI
+
+      enum AppRouter {
+        static func openApp() {
+          NSApp.activate(ignoringOtherApps: true)
+        }
+      }
+
+# ---------------------------
+# APP ENTRY
+# ---------------------------
+  - path: HotHint/HotHintApp.swift
+    contents: |
+      import SwiftUI
+
+      @main
+      struct HotHintApp: App {
+        var body: some Scene {
+          WindowGroup {
+            ContentView()
+              .environmentObject(HotHintStore.shared)
+          }
+        }
+      }
+
+# ---------------------------
+# WIDGETKIT
+# ---------------------------
+  - path: HotHintWidgets/HotHintWidgetsBundle.swift
+    contents: |
+      import WidgetKit
+      import SwiftUI
+
+      @main
+      struct HotHintWidgetsBundle: WidgetBundle {
+        var body: some Widget {
+          HintWidget()
+        }
+      }
+
+  - path: HotHintWidgets/WidgetProvider.swift
+    contents: |
+      import WidgetKit
+      import SwiftUI
+
+      struct HintEntry: TimelineEntry {
+        let date: Date
+        let sheetKey: String
+        let items: [HintItem]
+        let title: String
+      }
+
+      struct HintProvider: TimelineProvider {
+        func placeholder(in context: Context) -> HintEntry {
+          .init(date: .now, sheetKey: "git", items: Array(HotHintStore.shared.data.sheets.first?.items.prefix(4) ?? []), title: "Git")
+        }
+
+        func getSnapshot(in context: Context, completion: @escaping (HintEntry) -> ()) {
+          let s = HotHintStore.shared.data.sheets.first
+          let entry = HintEntry(date: .now, sheetKey: s?.key ?? "git", items: Array(s?.items.prefix(4) ?? []), title: s?.name ?? "Hints")
+          completion(entry)
+        }
+
+        func getTimeline(in context: Context, completion: @escaping (Timeline<HintEntry>) -> ()) {
+          let s = HotHintStore.shared.data.sheets.first
+          let entry = HintEntry(date: .now, sheetKey: s?.key ?? "git", items: Array(s?.items.prefix(8) ?? []), title: s?.name ?? "Hints")
+          completion(Timeline(entries: [entry], policy: .never))
+        }
+      }
+
+  - path: HotHintWidgets/WidgetViews.swift
+    contents: |
+      import SwiftUI
+      import WidgetKit
+
+      struct HintWidgetView: View {
+        let entry: HintEntry
+
+        var body: some View {
+          VStack(alignment: .leading, spacing: 8) {
+            Text(entry.title).font(.headline)
+            ForEach(entry.items.prefix(6)) { item in
+              HStack {
+                Text(item.title).lineLimit(1)
+                Spacer()
+                Button(intent: CopyHintIntent(command: item.command)) {
+                  Image(systemName: "doc.on.doc")
+                }
+                .buttonStyle(.borderless)
+                .help("Copy \"\(item.command)\"")
+              }
+              .font(.caption)
+            }
+            Spacer(minLength: 0)
+          }
+          .padding()
+        }
+      }
+
+  - path: HotHintWidgets/HotHintWidgets.swift
+    contents: |
+      import WidgetKit
+      import SwiftUI
+      import AppIntents
+
+      struct HintWidget: Widget {
+        var body: some WidgetConfiguration {
+          AppIntentConfiguration(kind: "HotHintWidget",
+                                 intent: SelectHintSheetIntent.self,
+                                 provider: SelectableHintProvider()) { entry in
+            HintWidgetView(entry: entry)
+          }
+          .configurationDisplayName("Hint Sheet")
+          .description("Pin a sheet and copy commands in one click.")
+          .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        }
+      }
+
+      // Intent: choose which sheet this widget shows
+      struct SelectHintSheetIntent: AppIntent {
+        static var title: LocalizedStringResource = "Select Sheet"
+        @Parameter(title: "Sheet") var sheet: HintSheetEntity
+
+        static var parameterSummary: some ParameterSummary {
+          Summary("Show \(\.$sheet)")
+        }
+      }
+
+      struct SelectableHintProvider: AppIntentTimelineProvider {
+        typealias Intent = SelectHintSheetIntent
+
+        func placeholder(in context: Context) -> HintEntry {
+          .init(date: .now, sheetKey: "git", items: Array(HotHintStore.shared.data.sheets.first?.items.prefix(4) ?? []), title: "Git")
+        }
+
+        func snapshot(for configuration: SelectHintSheetIntent, in context: Context) async -> HintEntry {
+          await entry(for: configuration)
+        }
+
+        func timeline(for configuration: SelectHintSheetIntent, in context: Context) async -> Timeline<HintEntry> {
+          let entry = await entry(for: configuration)
+          return Timeline(entries: [entry], policy: .never)
+        }
+
+        private func entry(for configuration: SelectHintSheetIntent) async -> HintEntry {
+          let key = configuration.sheet.id
+          let sheet = HotHintStore.shared.data.sheets.first(where: { $0.key == key }) ?? HotHintStore.shared.data.sheets.first!
+          return HintEntry(date: .now, sheetKey: sheet.key, items: Array(sheet.items.prefix(8)), title: sheet.name)
+        }
+      }
+
+# ---------------------------
+# QUICK START / TASKS
+# ---------------------------
+tasks:
+  - "Create Xcode project with two targets (App + Widget Extension) named above."
+  - "Enable App Groups on both targets with ID: group.com.dannyfrancken.hothint."
+  - "Add files exactly as specified; ensure shared files in `Shared/` are members of BOTH targets."
+  - "Include `hints.json` in Copy Bundle Resources for BOTH targets."
+  - "In Xcode, add the widget to the macOS Notification Center/Desktop; pick a cheatsheet via widget config."
+  - "Click the copy icons in the widget to confirm AppIntent copy works (requires macOS 14+ interactive widgets)."
+  - "Edit hints in the app; verify the widget reflects changes immediately via timeline reload on save."
+
+enhancements_next:
+  - "Add search + categories in app; support reordering items."
+  - "Import/Export cheats via JSON."
+  - "Add a menubar popover mirroring the widget content."
+  - "Free tier: 1 custom sheet + edit built-ins; Premium: unlimited, iCloud sync, menubar, Raycast command."
+
+notes:
+  - "Widgets are glanceable; keep 4–8 items visible. Tap/Click triggers AppIntents (copy)."
+  - "Multiple widgets are supported: users can add one per sheet and configure each with SelectHintSheetIntent."
+  - "For iCloud sync later, swap HotHintStore to use an App Group container + CloudKit."

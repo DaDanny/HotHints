@@ -1,0 +1,521 @@
+project:
+  name: HeadlinerCheats
+  platform: macOS
+  min_macos_version: "14.0"
+  language: Swift
+  frameworks:
+    - SwiftUI
+    - WidgetKit
+    - AppIntents
+    - UniformTypeIdentifiers
+
+targets:
+  - name: HeadlinerCheats
+    type: app
+    bundle_id: com.dannyfrancken.headlinercheats
+    capabilities: []
+    info_plist:
+      - NSAppTransportSecurity: { NSAllowsArbitraryLoads: true }
+
+  - name: CheatsWidgets
+    type: widget-extension
+    bundle_id: com.dannyfrancken.headlinercheats.widgets
+    embeds:
+      - HeadlinerCheats
+    dependencies:
+      - HeadlinerCheats
+
+file_structure:
+  HeadlinerCheats:
+    - HeadlinerCheatsApp.swift
+    - Models/
+      - CheatModels.swift
+    - Data/
+      - cheatsheets.json
+      - CheatsStore.swift
+    - Intents/
+      - CopyCheatIntent.swift
+      - CheatsheetEntity.swift
+    - UI/
+      - ContentView.swift
+      - EditorView.swift
+      - CheatsheetListView.swift
+    - Services/
+      - PasteboardService.swift
+      - AppRouter.swift
+  CheatsWidgets:
+    - CheatsWidgetsBundle.swift
+    - CheatsheetWidget.swift
+    - WidgetViews.swift
+    - WidgetProvider.swift
+
+# ---------------------------
+# MODELS & STORAGE
+# ---------------------------
+files:
+
+  - path: HeadlinerCheats/Models/CheatModels.swift
+    contents: |
+      import Foundation
+
+      public struct CheatItem: Identifiable, Codable, Hashable {
+        public var id: UUID = .init()
+        public var title: String
+        public var command: String
+        public var notes: String?
+      }
+
+      public struct Cheatsheet: Identifiable, Codable, Hashable {
+        public var id: UUID = .init()
+        public var key: String       // "git", "terminal", "rails"
+        public var name: String
+        public var items: [CheatItem]
+        public var isUserEditable: Bool = true
+      }
+
+      public struct AppData: Codable {
+        public var sheets: [Cheatsheet]
+      }
+
+  - path: HeadlinerCheats/Data/cheatsheets.json
+    contents: |
+      {
+        "sheets": [
+          {
+            "key": "git",
+            "name": "Git",
+            "isUserEditable": true,
+            "items": [
+              { "title": "Status", "command": "git status", "notes": "Show changes" },
+              { "title": "Add All", "command": "git add -A", "notes": "" },
+              { "title": "Amend Last Commit", "command": "git commit --amend", "notes": "" },
+              { "title": "Soft Reset", "command": "git reset --soft HEAD~1", "notes": "" }
+            ]
+          },
+          {
+            "key": "terminal",
+            "name": "Terminal",
+            "isUserEditable": true,
+            "items": [
+              { "title": "Delete word (back)", "command": "Ctrl+W", "notes": "Zsh/Bash readline" },
+              { "title": "Beginning / End", "command": "Ctrl+A / Ctrl+E", "notes": "" },
+              { "title": "Kill line", "command": "Ctrl+U / Ctrl+K", "notes": "" }
+            ]
+          },
+          {
+            "key": "rails",
+            "name": "Rails",
+            "isUserEditable": true,
+            "items": [
+              { "title": "Run model specs", "command": "bundle exec rspec spec/models", "notes": "" },
+              { "title": "Rails console", "command": "bin/rails c", "notes": "" },
+              { "title": "DB migrate", "command": "bin/rails db:migrate", "notes": "" }
+            ]
+          }
+        ]
+      }
+
+  - path: HeadlinerCheats/Data/CheatsStore.swift
+    contents: |
+      import Foundation
+
+      final class CheatsStore: ObservableObject {
+        static let shared = CheatsStore()
+        @Published private(set) var data: AppData = .init(sheets: [])
+
+        private let filename = "cheatsheets.user.json"
+
+        private var userURL: URL {
+          let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+          let appDir = dir.appendingPathComponent("HeadlinerCheats", isDirectory: true)
+          try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true)
+          return appDir.appendingPathComponent(filename)
+        }
+
+        init() {
+          load()
+        }
+
+        func load() {
+          if let userData = try? Data(contentsOf: userURL),
+             let decoded = try? JSONDecoder().decode(AppData.self, from: userData) {
+            self.data = decoded
+            return
+          }
+          // fallback to bundled json
+          if let url = Bundle.main.url(forResource: "cheatsheets", withExtension: "json"),
+             let data = try? Data(contentsOf: url),
+             let decoded = try? JSONDecoder().decode(AppData.self, from: data) {
+            self.data = decoded
+          }
+        }
+
+        func save() {
+          if let encoded = try? JSONEncoder().encode(data) {
+            try? encoded.write(to: userURL, options: .atomic)
+          }
+        }
+
+        func upsert(sheet: Cheatsheet) {
+          if let idx = data.sheets.firstIndex(where: { $0.id == sheet.id }) {
+            data.sheets[idx] = sheet
+          } else {
+            data.sheets.append(sheet)
+          }
+          save()
+        }
+
+        func addCustomSheet(named name: String) -> Cheatsheet {
+          var sheet = Cheatsheet(key: UUID().uuidString, name: name, items: [], isUserEditable: true)
+          upsert(sheet: sheet)
+          return sheet
+        }
+      }
+
+# ---------------------------
+# INTENTS (COPY + CONFIG)
+# ---------------------------
+  - path: HeadlinerCheats/Services/PasteboardService.swift
+    contents: |
+      import AppKit
+
+      enum PasteboardService {
+        static func copy(_ string: String) {
+          let pb = NSPasteboard.general
+          pb.clearContents()
+          pb.setString(string, forType: .string)
+        }
+      }
+
+  - path: HeadlinerCheats/Intents/CopyCheatIntent.swift
+    contents: |
+      import AppIntents
+
+      struct CopyCheatIntent: AppIntent {
+        static var title: LocalizedStringResource = "Copy Cheat"
+        static var description = IntentDescription("Copy a cheatsheet command to the clipboard.")
+
+        @Parameter(title: "Command")
+        var command: String
+
+        func perform() async throws -> some IntentResult {
+          PasteboardService.copy(command)
+          return .result()
+        }
+      }
+
+  - path: HeadlinerCheats/Intents/CheatsheetEntity.swift
+    contents: |
+      import AppIntents
+
+      struct CheatsheetEntity: AppEntity, Identifiable {
+        static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Cheatsheet")
+        static var defaultQuery = CheatsheetQuery()
+
+        var id: String
+        var name: String
+
+        var displayRepresentation: DisplayRepresentation {
+          .init(title: .init(name))
+        }
+      }
+
+      struct CheatsheetQuery: EntityQuery {
+        func entities(for identifiers: [CheatsheetEntity.ID]) async throws -> [CheatsheetEntity] {
+          let sheets = CheatsStore.shared.data.sheets
+          return sheets
+            .filter { identifiers.contains($0.key) }
+            .map { CheatsheetEntity(id: $0.key, name: $0.name) }
+        }
+
+        func suggestedEntities() async throws -> [CheatsheetEntity] {
+          CheatsStore.shared.data.sheets.map { CheatsheetEntity(id: $0.key, name: $0.name) }
+        }
+
+        func defaultResult() async -> CheatsheetEntity? {
+          await (try? suggestedEntities().first)
+        }
+      }
+
+# ---------------------------
+# APP UI (LIST + EDITOR)
+# ---------------------------
+  - path: HeadlinerCheats/UI/CheatsheetListView.swift
+    contents: |
+      import SwiftUI
+
+      struct CheatsheetListView: View {
+        @ObservedObject var store = CheatsStore.shared
+        @State private var showingAdd = false
+        @State private var newName = ""
+
+        var body: some View {
+          NavigationStack {
+            List {
+              ForEach(store.data.sheets) { sheet in
+                NavigationLink(sheet.name) {
+                  EditorView(sheet: sheet)
+                }
+              }
+            }
+            .navigationTitle("Cheatsheets")
+            .toolbar {
+              Button {
+                showingAdd = true
+              } label: { Image(systemName: "plus") }
+            }
+          }
+          .sheet(isPresented: $showingAdd) {
+            VStack(spacing: 12) {
+              Text("New Cheatsheet").font(.headline)
+              TextField("Name", text: $newName).textFieldStyle(.roundedBorder)
+              HStack {
+                Button("Cancel") { showingAdd = false }
+                Spacer()
+                Button("Create") {
+                  let sheet = store.addCustomSheet(named: newName.isEmpty ? "Custom" : newName)
+                  newName = ""
+                  showingAdd = false
+                }.keyboardShortcut(.defaultAction)
+              }
+            }
+            .padding()
+            .frame(width: 360)
+          }
+        }
+      }
+
+  - path: HeadlinerCheats/UI/EditorView.swift
+    contents: |
+      import SwiftUI
+
+      struct EditorView: View {
+        @ObservedObject var store = CheatsStore.shared
+        @State var sheet: Cheatsheet
+        @State private var title = ""
+        @State private var command = ""
+        @State private var notes = ""
+
+        var body: some View {
+          VStack(alignment: .leading, spacing: 12) {
+            Text(sheet.name).font(.title2).bold()
+            List {
+              ForEach(sheet.items) { item in
+                VStack(alignment: .leading) {
+                  HStack {
+                    Text(item.title).bold()
+                    Spacer()
+                    Button("Copy") { PasteboardService.copy(item.command) }
+                  }
+                  Text(item.command).font(.system(.body, design: .monospaced))
+                  if let n = item.notes, !n.isEmpty { Text(n).foregroundStyle(.secondary) }
+                }
+              }
+            }
+            .frame(minHeight: 240)
+
+            Divider()
+            Text("Add Item").font(.headline)
+            TextField("Title", text: $title)
+            TextField("Command", text: $command)
+              .font(.system(.body, design: .monospaced))
+            TextField("Notes (optional)", text: $notes)
+            HStack {
+              Spacer()
+              Button("Add") {
+                let new = CheatItem(title: title, command: command, notes: notes.isEmpty ? nil : notes)
+                sheet.items.append(new)
+                store.upsert(sheet: sheet)
+                title = ""; command = ""; notes = ""
+              }.disabled(command.isEmpty || title.isEmpty)
+            }
+          }
+          .padding()
+        }
+      }
+
+  - path: HeadlinerCheats/UI/ContentView.swift
+    contents: |
+      import SwiftUI
+
+      struct ContentView: View {
+        var body: some View {
+          CheatsheetListView()
+        }
+      }
+
+  - path: HeadlinerCheats/Services/AppRouter.swift
+    contents: |
+      import SwiftUI
+
+      enum AppRouter {
+        static func openApp() {
+          NSApp.activate(ignoringOtherApps: true)
+        }
+      }
+
+# ---------------------------
+# APP ENTRY
+# ---------------------------
+  - path: HeadlinerCheats/HeadlinerCheatsApp.swift
+    contents: |
+      import SwiftUI
+
+      @main
+      struct HeadlinerCheatsApp: App {
+        var body: some Scene {
+          WindowGroup {
+            ContentView()
+              .environmentObject(CheatsStore.shared)
+          }
+        }
+      }
+
+# ---------------------------
+# WIDGETKIT
+# ---------------------------
+  - path: CheatsWidgets/CheatsWidgetsBundle.swift
+    contents: |
+      import WidgetKit
+      import SwiftUI
+
+      @main
+      struct CheatsWidgetsBundle: WidgetBundle {
+        var body: some Widget {
+          CheatsheetWidget()
+        }
+      }
+
+  - path: CheatsWidgets/WidgetProvider.swift
+    contents: |
+      import WidgetKit
+      import SwiftUI
+
+      struct CheatsheetEntry: TimelineEntry {
+        let date: Date
+        let sheetKey: String
+        let items: [CheatItem]
+        let title: String
+      }
+
+      struct CheatsheetProvider: TimelineProvider {
+        func placeholder(in context: Context) -> CheatsheetEntry {
+          .init(date: .now, sheetKey: "git", items: Array(CheatsStore.shared.data.sheets.first?.items.prefix(4) ?? []), title: "Git")
+        }
+
+        func getSnapshot(in context: Context, completion: @escaping (CheatsheetEntry) -> ()) {
+          let s = CheatsStore.shared.data.sheets.first
+          let entry = CheatsheetEntry(date: .now, sheetKey: s?.key ?? "git", items: Array(s?.items.prefix(4) ?? []), title: s?.name ?? "Cheats")
+          completion(entry)
+        }
+
+        func getTimeline(in context: Context, completion: @escaping (Timeline<CheatsheetEntry>) -> ()) {
+          let s = CheatsStore.shared.data.sheets.first
+          let entry = CheatsheetEntry(date: .now, sheetKey: s?.key ?? "git", items: Array(s?.items.prefix(8) ?? []), title: s?.name ?? "Cheats")
+          completion(Timeline(entries: [entry], policy: .never))
+        }
+      }
+
+  - path: CheatsWidgets/WidgetViews.swift
+    contents: |
+      import SwiftUI
+      import WidgetKit
+
+      struct CheatsheetWidgetView: View {
+        let entry: CheatsheetEntry
+
+        var body: some View {
+          VStack(alignment: .leading, spacing: 8) {
+            Text(entry.title).font(.headline)
+            ForEach(entry.items.prefix(6)) { item in
+              HStack {
+                Text(item.title).lineLimit(1)
+                Spacer()
+                // Interactive button (macOS Sonoma+)
+                Button(intent: CopyCheatIntent(command: item.command)) {
+                  Image(systemName: "doc.on.doc")
+                }
+                .buttonStyle(.borderless)
+                .help("Copy \"\(item.command)\"")
+              }
+              .font(.caption)
+            }
+            Spacer(minLength: 0)
+          }
+          .padding()
+        }
+      }
+
+  - path: CheatsWidgets/CheatsheetWidget.swift
+    contents: |
+      import WidgetKit
+      import SwiftUI
+      import AppIntents
+
+      struct CheatsheetWidget: Widget {
+        var body: some WidgetConfiguration {
+          AppIntentConfiguration(kind: "CheatsheetWidget",
+                                 intent: SelectCheatsheetIntent.self,
+                                 provider: SelectableCheatsheetProvider()) { entry in
+            CheatsheetWidgetView(entry: entry)
+          }
+          .configurationDisplayName("Cheatsheet")
+          .description("Pin a cheatsheet and copy commands in one click.")
+          .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        }
+      }
+
+      // Intent: choose which cheatsheet this widget shows
+      struct SelectCheatsheetIntent: AppIntent {
+        static var title: LocalizedStringResource = "Select Cheatsheet"
+        @Parameter(title: "Cheatsheet") var sheet: CheatsheetEntity
+
+        static var parameterSummary: some ParameterSummary {
+          Summary("Show \(\.$sheet)")
+        }
+      }
+
+      struct SelectableCheatsheetProvider: AppIntentTimelineProvider {
+        typealias Intent = SelectCheatsheetIntent
+
+        func placeholder(in context: Context) -> CheatsheetEntry {
+          .init(date: .now, sheetKey: "git", items: Array(CheatsStore.shared.data.sheets.first?.items.prefix(4) ?? []), title: "Git")
+        }
+
+        func snapshot(for configuration: SelectCheatsheetIntent, in context: Context) async -> CheatsheetEntry {
+          await entry(for: configuration)
+        }
+
+        func timeline(for configuration: SelectCheatsheetIntent, in context: Context) async -> Timeline<CheatsheetEntry> {
+          let entry = await entry(for: configuration)
+          return Timeline(entries: [entry], policy: .never)
+        }
+
+        private func entry(for configuration: SelectCheatsheetIntent) async -> CheatsheetEntry {
+          let key = configuration.sheet.id
+          let sheet = CheatsStore.shared.data.sheets.first(where: { $0.key == key }) ?? CheatsStore.shared.data.sheets.first!
+          return CheatsheetEntry(date: .now, sheetKey: sheet.key, items: Array(sheet.items.prefix(8)), title: sheet.name)
+        }
+      }
+
+# ---------------------------
+# QUICK START / TASKS
+# ---------------------------
+tasks:
+  - "Create Xcode project with two targets (App + Widget Extension) named above."
+  - "Add files exactly as specified; build & run the app target."
+  - "In Xcode, add the widget to the macOS Notification Center/Desktop; pick a cheatsheet via widget config."
+  - "Click the copy icons in the widget to confirm AppIntent copy works (requires macOS 14+ interactive widgets)."
+  - "Edit cheatsheets in the app; verify the widget reflects changes after re-adding or via timeline refresh (next step)."
+
+enhancements_next:
+  - "Add timeline reload on save: call WidgetCenter.shared.reloadAllTimelines() after CheatsStore.save()."
+  - "Add search + categories in app; support reordering items."
+  - "Import/Export cheats via JSON."
+  - "Add a menubar popover mirroring the widget content."
+  - "Free tier: 1 custom sheet + edit built-ins; Premium: unlimited, iCloud sync, menubar, Raycast command."
+
+notes:
+  - "Widgets are glanceable; keep 4–8 items visible. Tap/Click triggers AppIntents (copy)."
+  - "Multiple widgets are supported: users can add one per cheatsheet and configure each with SelectCheatsheetIntent."
+  - "For iCloud sync later, swap CheatsStore to use AppGroup container + CloudKit (NSUbiquitousKeyValueStore or CK)."
